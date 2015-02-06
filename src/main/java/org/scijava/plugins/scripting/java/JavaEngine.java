@@ -145,8 +145,9 @@ public class JavaEngine extends AbstractScriptEngine {
 		File file = path == null ? null : new File(path);
 
 		final Writer writer = getContext().getErrorWriter();
+		final Builder builder = new Builder();
 		try {
-			final Builder builder = new Builder(file, reader, writer);
+			builder.initialize(file, reader, writer);
 			final MavenProject project = builder.project;
 			String mainClass = builder.mainClass;
 
@@ -200,8 +201,9 @@ public class JavaEngine extends AbstractScriptEngine {
 	 * @param errorWriter where to write the errors
 	 */
 	public void compile(final File file, final Writer errorWriter) {
+		final Builder builder = new Builder();
 		try {
-			final Builder builder = new Builder(file, null, errorWriter);
+			builder.initialize(file, null, errorWriter);
 			try {
 				builder.project.build();
 			} finally {
@@ -221,8 +223,9 @@ public class JavaEngine extends AbstractScriptEngine {
 	 * @param errorWriter the destination for error messages
 	 */
 	public void makeJar(final File file, final boolean includeSources, final File output, final Writer errorWriter) {
+		final Builder builder = new Builder();
 		try {
-			final Builder builder = new Builder(file, null, errorWriter);
+			builder.initialize(file, null, errorWriter);
 			try {
 				builder.project.build(true, true, includeSources);
 				final File target = builder.project.getTarget();
@@ -265,13 +268,16 @@ public class JavaEngine extends AbstractScriptEngine {
 	 * @author Johannes Schindelin
 	 */
 	private class Builder {
-		private final PrintStream err;
-		private final File temporaryDirectory;
+		private PrintStream err;
+		private File temporaryDirectory;
 		private String mainClass;
 		private MavenProject project;
 
 		/**
-		 * Constructs a wrapper around a possibly temporary project.
+		 * Initializes a wrapper around a possibly temporary project.
+		 * <p>
+		 * This method is intended to be called only once.
+		 * </p>
 		 * 
 		 * @param file the {@code .java} file to build (or null, if {@code reader} is set).
 		 * @param reader provides the Java source if {@code file} is {@code null} 
@@ -284,7 +290,7 @@ public class JavaEngine extends AbstractScriptEngine {
 		 * @throws TransformerException
 		 * @throws TransformerFactoryConfigurationError
 		 */
-		private Builder(final File file, final Reader reader,
+		private void initialize(final File file, final Reader reader,
 				final Writer errorWriter) throws ScriptException, IOException,
 				ParserConfigurationException, SAXException,
 				TransformerConfigurationException, TransformerException,
