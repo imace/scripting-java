@@ -151,35 +151,31 @@ public class JavaEngine extends AbstractScriptEngine {
 			final MavenProject project = builder.project;
 			String mainClass = builder.mainClass;
 
-			try {
-				project.build(true);
+			project.build(true);
+			if (mainClass == null) {
+				mainClass = project.getMainClass();
 				if (mainClass == null) {
-					mainClass = project.getMainClass();
-					if (mainClass == null) {
-						throw new ScriptException(
-								"No main class found for file " + file);
-					}
+					throw new ScriptException(
+						"No main class found for file " + file);
 				}
-
-				// make class loader
-				String[] paths = project.getClassPath(false).split(
-						File.pathSeparator);
-				URL[] urls = new URL[paths.length];
-				for (int i = 0; i < urls.length; i++)
-					urls[i] = new URL("file:" + paths[i]
-							+ (paths[i].endsWith(".jar") ? "" : "/"));
-				URLClassLoader classLoader = new URLClassLoader(urls,
-						Thread.currentThread().getContextClassLoader());
-
-				// needed for sezpoz
-				Thread.currentThread().setContextClassLoader(classLoader);
-
-				// launch main class
-				final Class<?> clazz = classLoader.loadClass(mainClass);
-				javaService.run(clazz);
-			} finally {
-				builder.cleanup();
 			}
+
+			// make class loader
+			String[] paths = project.getClassPath(false).split(
+				File.pathSeparator);
+			URL[] urls = new URL[paths.length];
+			for (int i = 0; i < urls.length; i++)
+				urls[i] = new URL("file:" + paths[i]
+						+ (paths[i].endsWith(".jar") ? "" : "/"));
+			URLClassLoader classLoader = new URLClassLoader(urls,
+				Thread.currentThread().getContextClassLoader());
+
+			// needed for sezpoz
+			Thread.currentThread().setContextClassLoader(classLoader);
+
+			// launch main class
+			final Class<?> clazz = classLoader.loadClass(mainClass);
+			javaService.run(clazz);
 		} catch (Exception e) {
 			if (writer != null) {
 				final PrintWriter err = new PrintWriter(writer);
@@ -190,6 +186,8 @@ public class JavaEngine extends AbstractScriptEngine {
 					throw (ScriptException) e;
 				throw new ScriptException(e);
 			}
+		} finally {
+			builder.cleanup();
 		}
 		return null;
 	}
@@ -204,13 +202,11 @@ public class JavaEngine extends AbstractScriptEngine {
 		final Builder builder = new Builder();
 		try {
 			builder.initialize(file, null, errorWriter);
-			try {
-				builder.project.build();
-			} finally {
-				builder.cleanup();
-			}
+			builder.project.build();
 		} catch (Throwable t) {
 			printOrThrow(t, errorWriter);
+		} finally {
+			builder.cleanup();
 		}
 	}
 
@@ -226,17 +222,16 @@ public class JavaEngine extends AbstractScriptEngine {
 		final Builder builder = new Builder();
 		try {
 			builder.initialize(file, null, errorWriter);
-			try {
-				builder.project.build(true, true, includeSources);
-				final File target = builder.project.getTarget();
-				if (output != null && !target.equals(output)) {
-					BuildEnvironment.copyFile(target, output);
-				}
-			} finally {
-				builder.cleanup();
+			builder.project.build(true, true, includeSources);
+			final File target = builder.project.getTarget();
+			if (output != null && !target.equals(output)) {
+				BuildEnvironment.copyFile(target, output);
 			}
 		} catch (Throwable t) {
 			printOrThrow(t, errorWriter);
+		}
+		finally {
+			builder.cleanup();
 		}
 	}
 
